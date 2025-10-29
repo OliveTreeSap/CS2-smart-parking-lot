@@ -6,13 +6,18 @@ The parking lot is monitored and controlled through a user interface that commun
 - Controlled/Automatic gate
 - Automatic vehicle elevator
 - Automatic lighting system
-- Smoke detection
-- Rain detection
+- Fire detection and alarm
+- Rain detection and automatic canopy system
 
 ### Parts used
-- Microcontroller: WeAct ESP32-S3-A N16R8
+- Microcontroller: TBD
+    - The ESP32-S3 we wanted to use unfortunately shorted
 - Building material: foam paper
-- TBD
+- IR sensor for flame detection
+- Humidity sensor for rain detection
+- Servos for the main gate
+- DC motors for the elevator and canopy system
+- LED strips for the lighting system
 
 ### Wiring diagram
 TBD
