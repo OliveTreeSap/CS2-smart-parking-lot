@@ -1,2 +1,2 @@
-admin, password123
-user, password123
+ad, 123
+user, 123

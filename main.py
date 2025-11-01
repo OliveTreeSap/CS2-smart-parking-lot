@@ -1,7 +1,7 @@
 import customtkinter as ctk
 import tkinter as tk
 from PIL import Image
-from frames import login_frame
+from frames import login_frame, main_frame
 from authentication.perm_manager import PermissionManager
 
 
@@ -9,28 +9,54 @@ class App(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.perm_manager = PermissionManager()
+        self.current_user = None
 
         self.title("Parking Lot Manager")
         self.geometry("1920x1080")
-        # Expands the row and column so that they fit perfectly
-        self.grid_rowconfigure(0, weight=1)
-        self.grid_columnconfigure(1, weight=1)
 
-        # Transparent image to offset the login frame
-        self.offset_image = ctk.CTkImage(dark_image=Image.open("CS2/assets/login_offset.png"),
-                                     size=(1280, 1080))
-        self.offset_image_label = ctk.CTkLabel(self, image=self.offset_image, text="")
-        self.offset_image_label.grid(row=0, column=0, sticky="we")
-
-        # Background image for the login frame
+        # Background image for the login screen only
         self.background_img = ctk.CTkImage(dark_image=Image.open("CS2/assets/minecraft_night_1_gradient.png"),
                                            size=(1920, 1080))
         self.background_img_label = ctk.CTkLabel(self, image=self.background_img, text="")
-        self.background_img_label.place(x=0, y=0)
+        self.background_img_label.place(x=0, y=0, relwidth=1, relheight=1)
 
-        # Initializes the login frame
+        # Initialize frames (all will be placed at the same location, stacked)
         self.login_frame = login_frame.LoginFrame(self)
-        self.login_frame.grid(row=0, column=1, padx=50, sticky="ew")
+        self.main_frame = main_frame.MainFrame(self)
+
+        # Show login frame by default
+        self.show_login()
+
+    def show_frame(self, frame_to_show, show_background=True, center=False):
+        """Generic method to switch between frames"""
+        # Hide all frames
+        self.login_frame.place_forget()
+        self.main_frame.place_forget()
+        
+        # Show or hide background
+        if show_background:
+            self.background_img_label.place(x=0, y=0, relwidth=1, relheight=1)
+        else:
+            self.background_img_label.place_forget()
+        
+        # Show the requested frame
+        if center:
+            # Center the frame (for login with background visible)
+            frame_to_show.place(relx=0.85, rely=0.5, relwidth=0.25, relheight=0.3, anchor="center")
+        else:
+            # Full screen frame (for main content)
+            frame_to_show.place(x=0, y=0, relwidth=1, relheight=1)
+
+    def show_login(self):
+        """Show the login frame with background"""
+        self.current_user = None
+        self.show_frame(self.login_frame, show_background=True, center=True)
+
+    def show_main(self, username):
+        """Show the main frame after successful login"""
+        self.current_user = username
+        self.main_frame.update_welcome(username)
+        self.show_frame(self.main_frame, show_background=False)
 
 
 if __name__ == "__main__":
