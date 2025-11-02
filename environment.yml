@@ -1,0 +1,16 @@
+name: smart-parking-lot
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pip
+  - setuptools
+  - wheel
+  - pip:
+    - customtkinter
+    - CTkMessageBox
+    - pyserial
+    - pywinstyles
+    - Pillow
+

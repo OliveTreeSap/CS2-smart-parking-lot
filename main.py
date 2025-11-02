@@ -15,7 +15,7 @@ class App(ctk.CTk):
         self.geometry("1920x1080")
 
         # Background image for the login screen only
-        self.background_img = ctk.CTkImage(dark_image=Image.open("CS2/assets/minecraft_night_1_gradient.png"),
+        self.background_img = ctk.CTkImage(dark_image=Image.open("assets/minecraft_night_1_gradient.png"),
                                            size=(1920, 1080))
         self.background_img_label = ctk.CTkLabel(self, image=self.background_img, text="")
         self.background_img_label.place(x=0, y=0, relwidth=1, relheight=1)
@@ -42,7 +42,7 @@ class App(ctk.CTk):
         # Show the requested frame
         if center:
             # Center the frame (for login with background visible)
-            frame_to_show.place(relx=0.85, rely=0.5, relwidth=0.25, relheight=0.3, anchor="center")
+            frame_to_show.place(relx=1-0.3/2, rely=0.5, relwidth=0.3, relheight=1, anchor="center")
         else:
             # Full screen frame (for main content)
             frame_to_show.place(x=0, y=0, relwidth=1, relheight=1)

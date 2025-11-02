@@ -1,3 +1,5 @@
 customtkinter
 CTkMessageBox
+pyserial
 pywinstyles
+Pillow

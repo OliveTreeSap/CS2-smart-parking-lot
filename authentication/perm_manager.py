@@ -1,8 +1,5 @@
-from authentication.user import User
-
-
 class PermissionManager:
-    def __init__(self, db="CS2/database.txt"):
+    def __init__(self, db="database.txt"):
         self.db = db
 
     def authenticator(self, name, password):
