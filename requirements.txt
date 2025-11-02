@@ -3,3 +3,4 @@ CTkMessageBox
 pyserial
 pywinstyles
 Pillow
+matplotlib

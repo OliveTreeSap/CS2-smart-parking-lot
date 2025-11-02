@@ -13,4 +13,5 @@ dependencies:
     - pyserial
     - pywinstyles
     - Pillow
+    - matplotlib
 

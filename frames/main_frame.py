@@ -1,10 +1,19 @@
 import customtkinter as ctk
 import CTkMessagebox as ctkmb
 from arduino_comm import ArduinoController
+from collections import deque
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
 
 
 class MainFrame(ctk.CTkFrame):
     """A class that handles the main user interface which displays information from the Arduino"""
+    
+    # Configuration constants
+    NUM_LEDS = 5
+    MAX_HISTORY = 100
+    
     def __init__(self, master):
         super().__init__(master, fg_color="transparent")
         
@@ -12,6 +21,9 @@ class MainFrame(ctk.CTkFrame):
         self.arduino = ArduinoController()
         self.update_job = None  # Store the after() job ID for cleanup
         self.sensor_labels = {}  # Store sensor value labels for updating
+        self.sensor_history = {}  # Store sensor history for charts
+        self.led_checkboxes = {}  # Store LED checkbox widgets
+        self.motor_var = ctk.StringVar(value="STOP")  # Motor control state
 
         # Expands the widgets to fit the frame
         self.grid_rowconfigure(1, weight=1)
@@ -148,28 +160,121 @@ class MainFrame(ctk.CTkFrame):
         )
         self.send_button.grid(row=0, column=2, padx=20, pady=10)
         
-        # Sensor Data Display Section
+        # Sensor Data Display Section - Split Layout
         self.sensor_frame = ctk.CTkFrame(self.content_frame)
         self.sensor_frame.grid(row=2, column=0, sticky="nsew", padx=20, pady=(0, 20))
+        self.sensor_frame.grid_columnconfigure(0, weight=12)
+        self.sensor_frame.grid_columnconfigure(1, weight=1)
+        self.sensor_frame.grid_rowconfigure(0, weight=1)
+        
+        # Left panel for sensors data and data chart
+        self.left_panel = ctk.CTkFrame(self.sensor_frame)
+        self.left_panel.grid(row=0, column=0, sticky="nsew", padx=(10, 5), pady=10)
+        self.left_panel.grid_rowconfigure(1, weight=1)  # Sensor scroll expands
+        self.left_panel.grid_rowconfigure(2, weight=0)  # Chart frame fixed size
+        self.left_panel.grid_columnconfigure(0, weight=1)
+        
+        # Left panel title
+        ctk.CTkLabel(
+            self.left_panel,
+            text="Sensor Data & Charts",
+            font=ctk.CTkFont(size=18, weight="bold")
+        ).grid(row=0, column=0, padx=10, pady=(10, 5), sticky="w")
+        
+        # Scrollable frame for sensors only
+        self.sensor_scroll = ctk.CTkScrollableFrame(self.left_panel)
+        self.sensor_scroll.grid(row=1, column=0, sticky="nsew", padx=10, pady=10)
+        
+        # Chart frame at bottom of left panel (stretched horizontally)
+        self.chart_frame = ctk.CTkFrame(self.left_panel)
+        self.chart_frame.grid(row=2, column=0, sticky="ew", padx=(0,70), pady=(0, 10))
+        
+        # Initialize matplotlib chart
+        self.figure = None
+        self.canvas = None
+        self.ax = None
+        self.init_chart()
+        
+        # Raw data display at very bottom of left panel
+        self.raw_data_label = ctk.CTkLabel(
+            self.left_panel,
+            text="Raw Data: (none)",
+            font=ctk.CTkFont(size=11),
+            text_color="gray",
+            wraplength=400,
+            justify="left"
+        )
+        self.raw_data_label.grid(row=3, column=0, padx=10, pady=(0, 10), sticky="ew")
+        
+        # Right panel used for leds and motor controls
+        self.right_panel = ctk.CTkFrame(self.sensor_frame)
+        self.right_panel.grid(row=0, column=1, sticky="nsew", padx=(5, 10), pady=10)
+        self.right_panel.grid_rowconfigure(0, weight=1)  # Upper section (LED controls)
+        self.right_panel.grid_rowconfigure(1, weight=1)  # Lower section (Motor controls)
+        self.right_panel.grid_columnconfigure(0, weight=1)
+        
+        # Upper right frame for LEDs control
+        self.led_control_frame = ctk.CTkFrame(self.right_panel)
+        self.led_control_frame.grid(row=0, column=0, sticky="nsew", padx=5, pady=(5, 2.5))
+        self.led_control_frame.grid_rowconfigure(1, weight=1)
+        self.led_control_frame.grid_columnconfigure(0, weight=1)
         
         ctk.CTkLabel(
-            self.sensor_frame,
-            text="Sensor Data",
-            font=ctk.CTkFont(size=20, weight="bold")
-        ).pack(padx=20, pady=(20, 10))
+            self.led_control_frame,
+            text="LED Controls",
+            font=ctk.CTkFont(size=16, weight="bold")
+        ).grid(row=0, column=0, padx=10, pady=(10, 5), sticky="w")
         
-        # Create scrollable frame for sensors
-        self.sensor_scroll = ctk.CTkScrollableFrame(self.sensor_frame)
-        self.sensor_scroll.pack(fill="both", expand=True, padx=20, pady=(0, 10))
+        # Scrollable frame for LED checkboxes
+        self.led_scroll = ctk.CTkScrollableFrame(self.led_control_frame)
+        self.led_scroll.grid(row=1, column=0, sticky="nsew", padx=10, pady=(5, 10))
         
-        # Raw data display
-        self.raw_data_label = ctk.CTkLabel(
-            self.sensor_frame,
-            text="Raw Data: (none)",
-            font=ctk.CTkFont(size=12),
-            text_color="gray"
-        )
-        self.raw_data_label.pack(padx=20, pady=(0, 20))
+        # Create LED checkboxes dynamically
+        for i in range(1, self.NUM_LEDS + 1):
+            led_var = ctk.BooleanVar(value=False)
+            checkbox = ctk.CTkCheckBox(
+                self.led_scroll,
+                text=f"LED {i}",
+                variable=led_var,
+                command=lambda led_num=i, var=led_var: self.toggle_led(led_num, var),
+                font=ctk.CTkFont(size=14)
+            )
+            checkbox.pack(anchor="w", padx=10, pady=5)
+            self.led_checkboxes[i] = {"var": led_var, "widget": checkbox}
+        
+        # Lower right frame for motor controll
+        self.motor_control_frame = ctk.CTkFrame(self.right_panel)
+        self.motor_control_frame.grid(row=1, column=0, sticky="nsew", padx=5, pady=(2.5, 5))
+        self.motor_control_frame.grid_rowconfigure(1, weight=1)
+        self.motor_control_frame.grid_columnconfigure(0, weight=1)
+        
+        ctk.CTkLabel(
+            self.motor_control_frame,
+            text="Motor Controls",
+            font=ctk.CTkFont(size=16, weight="bold")
+        ).grid(row=0, column=0, padx=10, pady=(10, 5), sticky="w")
+        
+        # Scrollable frame for motor radio buttons
+        self.motor_scroll = ctk.CTkScrollableFrame(self.motor_control_frame)
+        self.motor_scroll.grid(row=1, column=0, sticky="nsew", padx=10, pady=(5, 10))
+        
+        # Create motor control radio buttons
+        motor_options = [
+            ("Forward", "MOTOR_FORWARD"),
+            ("Reverse", "MOTOR_REVERSE"),
+            ("Stop", "MOTOR_STOP")
+        ]
+        
+        for label, command in motor_options:
+            radio = ctk.CTkRadioButton(
+                self.motor_scroll,
+                text=label,
+                variable=self.motor_var,
+                value=command,
+                command=lambda cmd=command: self.send_motor_command(cmd),
+                font=ctk.CTkFont(size=14)
+            )
+            radio.pack(anchor="w", padx=10, pady=5)
 
     def get_available_ports(self):
         """Get list of available COM ports"""
@@ -184,6 +289,72 @@ class MainFrame(ctk.CTkFrame):
             self.port_var.set(ports[0])
         else:
             self.port_var.set("No ports found")
+    
+    def init_chart(self):
+        """Initialize the matplotlib chart for sensor data visualization"""
+        # Create figure with dark background to match CustomTkinter theme
+        self.figure = Figure(figsize=(6, 4), dpi=80, facecolor='#2b2b2b')
+        self.ax = self.figure.add_subplot(111)
+        self.ax.set_facecolor('#1e1e1e')
+        self.ax.set_xlabel('Time (samples)', color='white')
+        self.ax.set_ylabel('Value', color='white')
+        self.ax.set_title('Sensor Data History', color='white', fontsize=12, fontweight='bold')
+        self.ax.tick_params(colors='white')
+        self.ax.grid(True, alpha=0.3, color='gray')
+        
+        # Adjust layout to prevent label cutoff
+        self.figure.tight_layout()
+        
+        # Create canvas and embed in tkinter
+        self.canvas = FigureCanvasTkAgg(self.figure, master=self.chart_frame)
+        self.canvas.draw()
+        self.canvas.get_tk_widget().pack(fill="both", expand=True)
+    
+    def update_charts(self):
+        """Update the charts with current sensor history"""
+        if not self.sensor_history or self.ax is None:
+            return
+        
+        # Clear previous plot
+        self.ax.clear()
+        self.ax.set_facecolor('#1e1e1e')
+        self.ax.set_xlabel('Time (samples)', color='white')
+        self.ax.set_ylabel('Value', color='white')
+        self.ax.set_title('Sensor Data History', color='white', fontsize=12, fontweight='bold')
+        self.ax.tick_params(colors='white')
+        self.ax.grid(True, alpha=0.3, color='gray')
+        
+        # Plot each sensor's history
+        colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', 
+                  '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
+        color_idx = 0
+        
+        for label, history in self.sensor_history.items():
+            if len(history) > 0:
+                # Convert deque to list for plotting
+                values = list(history)
+                x_values = list(range(len(values)))
+                
+                # Plot with label
+                self.ax.plot(x_values, values, 
+                           label=label, 
+                           color=colors[color_idx % len(colors)],
+                           linewidth=2,
+                           marker='o',
+                           markersize=3)
+                color_idx += 1
+        
+        # Add legend if there are any lines
+        if self.sensor_history:
+            legend = self.ax.legend(loc='upper left', 
+                                   facecolor='#2b2b2b', 
+                                   edgecolor='white',
+                                   fontsize=9)
+            for text in legend.get_texts():
+                text.set_color('white')
+        
+        # Redraw canvas
+        self.canvas.draw()
     
     def create_or_update_sensor_display(self, label: str, value):
         """Create or update a sensor display for a given label"""
@@ -211,12 +382,21 @@ class MainFrame(ctk.CTkFrame):
             value_label.pack(side="left", padx=10, pady=10)
             
             self.sensor_labels[label] = value_label
+            
+            # Initialize history tracking for this sensor
+            self.sensor_history[label] = deque(maxlen=self.MAX_HISTORY)
         
         # Update the value
         value_label = self.sensor_labels[label]
         if value is not None:
             if isinstance(value, float):
                 value_label.configure(text=f"{value:.2f}")
+                # Add numeric value to history
+                self.sensor_history[label].append(value)
+            elif isinstance(value, (int, complex)):
+                value_label.configure(text=str(value))
+                # Add numeric value to history
+                self.sensor_history[label].append(float(value))
             else:
                 value_label.configure(text=str(value))
         else:
@@ -240,7 +420,7 @@ class MainFrame(ctk.CTkFrame):
             old_color = self.status_label.cget("text_color")
             self.status_label.configure(
                 text=f"● Sent: {command}",
-                text_color="blue"
+                text_color="#029CFE"
             )
             self.after(2000, lambda: self.status_label.configure(
                 text=old_text,
@@ -350,24 +530,108 @@ class MainFrame(ctk.CTkFrame):
         if raw_data:
             self.raw_data_label.configure(text=f"Raw Data: {raw_data}")
         
+        # Update charts (every 5 updates to reduce CPU usage)
+        if not hasattr(self, '_update_counter'):
+            self._update_counter = 0
+        self._update_counter += 1
+        if self._update_counter >= 5:
+            self.update_charts()
+            self._update_counter = 0
+        
         # Schedule next update (100ms = 10 updates per second)
         self.update_job = self.after(100, self.update_sensor_data)
     
     def reset_sensor_displays(self):
         """Reset all sensor displays to default state"""
-        # Clear all sensor display widgets
+        # Clear all sensor display widgets in the scrollable frame
         for widget in self.sensor_scroll.winfo_children():
             widget.destroy()
         
         # Clear the sensor labels dictionary
         self.sensor_labels.clear()
         
+        # Clear sensor history
+        self.sensor_history.clear()
+        
+        # Reset the chart
+        if self.ax is not None:
+            self.ax.clear()
+            self.ax.set_facecolor('#1e1e1e')
+            self.ax.set_xlabel('Time (samples)', color='white')
+            self.ax.set_ylabel('Value', color='white')
+            self.ax.set_title('Sensor Data History', color='white', fontsize=12, fontweight='bold')
+            self.ax.tick_params(colors='white')
+            self.ax.grid(True, alpha=0.3, color='gray')
+            if self.canvas:
+                self.canvas.draw()
+        
         # Reset raw data display
         self.raw_data_label.configure(text="Raw Data: (none)")
+        
+        # Reset update counter
+        if hasattr(self, '_update_counter'):
+            self._update_counter = 0
     
     def show_error(self, message):
         """Display an error message to the user"""
         ctkmb.CTkMessagebox(title="Error", message=message, icon="warning")
+    
+    def toggle_led(self, led_num, var):
+        """Toggle LED on/off and send command to Arduino"""
+        if not self.arduino.is_connected():
+            self.show_error("Not connected to Arduino")
+            # Revert checkbox state
+            var.set(not var.get())
+            return
+        
+        # Determine command based on checkbox state
+        state = "ON" if var.get() else "OFF"
+        command = f"LED_{led_num}_{state}"
+        
+        # Send command to Arduino
+        if self.arduino.write(command):
+            # Update status briefly
+            old_text = self.status_label.cget("text")
+            old_color = self.status_label.cget("text_color")
+            self.status_label.configure(
+                text=f"● LED {led_num}: {state}",
+                text_color="#029CFE"
+            )
+            self.after(1500, lambda: self.status_label.configure(
+                text=old_text,
+                text_color=old_color
+            ))
+        else:
+            self.show_error(f"Failed to send LED {led_num} command")
+            # Revert checkbox state
+            var.set(not var.get())
+    
+    def send_motor_command(self, command):
+        """Send motor control command to Arduino"""
+        if not self.arduino.is_connected():
+            self.show_error("Not connected to Arduino")
+            # Revert radio button state
+            self.motor_var.set("MOTOR_STOP")
+            return
+        
+        # Send command to Arduino
+        if self.arduino.write(command):
+            # Update status briefly
+            old_text = self.status_label.cget("text")
+            old_color = self.status_label.cget("text_color")
+            motor_state = command.replace("MOTOR_", "").title()
+            self.status_label.configure(
+                text=f"● Motor: {motor_state}",
+                text_color="#029CFE"
+            )
+            self.after(1500, lambda: self.status_label.configure(
+                text=old_text,
+                text_color=old_color
+            ))
+        else:
+            self.show_error("Failed to send motor command")
+            # Revert to stop state
+            self.motor_var.set("MOTOR_STOP")
 
     def update_welcome(self, username):
         """Update the welcome message with the logged-in username"""
