@@ -62,7 +62,7 @@ python main.py
 ```
 
 ### Alternative Installation (Using requirements.txt)
-If you prefer to use pip directly or manage your own virtual environment:
+If you prefer to use pip directly or manage your own virtual environment, run line by line:
 
 ```bash
 # Create and activate a virtual environment (optional)
