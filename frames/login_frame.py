@@ -49,7 +49,7 @@ class LoginFrame(ctk.CTkFrame):
 
         # Username entry with icon
         self.name_entry = IconEntry(self, icon=self.user_icon, 
-                                    placeholder_text="Enter your username",
+                                    placeholder_text="Username",
                                     corner_radius=10,
                                     height=50)
         self.name_entry.entry.bind('<Return>', lambda e: self.get_info())
@@ -57,7 +57,7 @@ class LoginFrame(ctk.CTkFrame):
 
         # Password entry with icon
         self.password_entry = IconEntry(self, icon=self.password_icon,
-                                       placeholder_text="Enter your password",
+                                       placeholder_text="Password",
                                        corner_radius=10,
                                        height=50)
         self.password_entry.entry.configure(show="*")
@@ -93,6 +93,18 @@ class LoginFrame(ctk.CTkFrame):
         self.login_button.place(relx=0.05, rely=0.57)
         pywinstyles.set_opacity(self.login_button, color="#000001")
 
+        # Back button to return to user selection
+        self.back_button = ctk.CTkButton(self, text="← Back", 
+                        command=master.show_user_select,
+                        fg_color="gray", bg_color="#000001",
+                        text_color="white",
+                        hover_color=("#505050", "#404040"),
+                        font=ctk.CTkFont(size=14, weight="bold"),
+                        corner_radius=25,
+                        width=100, height=40)
+        self.back_button.place(relx=0.015, rely=0.9)
+        pywinstyles.set_opacity(self.back_button, color="#000001")
+
         # Exit button to exit the app
         self.exit_button = ctk.CTkButton(self, text="Exit", 
                         command=master.destroy,
@@ -101,8 +113,8 @@ class LoginFrame(ctk.CTkFrame):
                         hover_color=("#E0E0E0", "#D0D0D0"),
                         font=ctk.CTkFont(size=14, weight="bold"),
                         corner_radius=25,
-                        width=50, height=40)
-        self.exit_button.place(relx=0.95, rely=0.95)
+                        width=100, height=40)
+        self.exit_button.place(relx=0.015, rely=0.95)
         pywinstyles.set_opacity(self.exit_button, color="#000001")
 
     def get_info(self):

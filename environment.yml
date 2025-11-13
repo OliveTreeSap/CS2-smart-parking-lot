@@ -8,10 +8,9 @@ dependencies:
   - setuptools
   - wheel
   - pip:
-    - customtkinter
-    - CTkMessageBox
-    - pyserial
-    - pywinstyles
-    - Pillow
-    - matplotlib
+    - customtkinter>=5.2.0
+    - CTkMessagebox>=2.5
+    - pyserial>=3.5
+    - pywinstyles>=1.0.0
+    - Pillow>=10.0.0
 

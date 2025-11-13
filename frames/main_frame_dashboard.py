@@ -1,5 +1,4 @@
 import customtkinter as ctk
-from numpy import column_stack
 import pywinstyles
 from PIL import Image
 from arduino_comm import ArduinoController
