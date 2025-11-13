@@ -1,7 +1,7 @@
 import customtkinter as ctk
 import tkinter as tk
 from PIL import Image
-from frames import login_frame, main_frame
+from frames import login_frame, main_frame, main_frame_dashboard
 from authentication.perm_manager import PermissionManager
 
 
@@ -16,7 +16,7 @@ class App(ctk.CTk):
 
         # Initialize frames (all will be placed at the same location, stacked)
         self.login_frame = login_frame.LoginFrame(self)
-        self.main_frame = main_frame.MainFrame(self)
+        self.main_frame_dashboard = main_frame_dashboard.MainFrameDashboard(self)
 
         # Show login frame by default
         self.show_login()
@@ -25,7 +25,7 @@ class App(ctk.CTk):
         """Generic method to switch between frames"""
         # Hide all frames
         self.login_frame.place_forget()
-        self.main_frame.place_forget()
+        self.main_frame_dashboard.place_forget()
         
         # Show the requested frame (full screen)
         frame_to_show.place(x=0, y=0, relwidth=1, relheight=1)
@@ -38,10 +38,11 @@ class App(ctk.CTk):
     def show_main(self, username):
         """Show the main frame after successful login"""
         self.current_user = username
-        self.main_frame.update_welcome(username)
-        self.show_frame(self.main_frame)
+        self.main_frame_dashboard.update_welcome(username)
+        self.show_frame(self.main_frame_dashboard)
 
 
 if __name__ == "__main__":
     app = App()
+    # app.attributes("-fullscreen", "True")
     app.mainloop()

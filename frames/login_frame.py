@@ -17,27 +17,27 @@ class LoginFrame(ctk.CTkFrame):
         self.background_label.place(x=0, y=0)
 
         # Logo
-        self.logo = ctk.CTkLabel(self, text="SPL", font=ctk.CTkFont("Broadway", size=50, weight="bold"), 
+        self.logo = ctk.CTkLabel(self, text="SPKL", font=ctk.CTkFont("Broadway", size=50, weight="bold"), 
                                 text_color="white", bg_color='#000001')
         self.logo.place(relx=0.04, rely=0.02)
         pywinstyles.set_opacity(self.logo, color="#000001")
 
         # Login title
-        self.title = ctk.CTkLabel(master, text="LOGIN", 
+        self.title = ctk.CTkLabel(self, text="LOGIN", 
                                    font=ctk.CTkFont(size=75, weight="bold"),
                                    text_color="white", bg_color='#000001')
         self.title.place(relx=0.05, rely=0.15)
         pywinstyles.set_opacity(self.title, color="#000001")
 
         # Welcome back subtitle
-        self.welcome_text = ctk.CTkLabel(master, text="Welcome back", 
+        self.welcome_text = ctk.CTkLabel(self, text="Welcome back", 
                                         font=ctk.CTkFont(size=24),
                                         text_color="white", bg_color="#000001")
         self.welcome_text.place(relx=0.05, rely=0.25)
         pywinstyles.set_opacity(self.welcome_text, color="#000001")
 
         # Please enter your information text
-        self.info_text = ctk.CTkLabel(master, text="Please enter your information",
+        self.info_text = ctk.CTkLabel(self, text="Please enter your information",
                                       font=ctk.CTkFont(size=24),
                                       text_color="white", bg_color="#000001")
         self.info_text.place(relx=0.05, rely=0.28)
@@ -48,7 +48,7 @@ class LoginFrame(ctk.CTkFrame):
         self.password_icon = ctk.CTkImage(Image.open("assets/password_icon.png"), size=(34, 34))
 
         # Username entry with icon
-        self.name_entry = IconEntry(master, icon=self.user_icon, 
+        self.name_entry = IconEntry(self, icon=self.user_icon, 
                                     placeholder_text="Enter your username",
                                     corner_radius=10,
                                     height=50)
@@ -56,7 +56,7 @@ class LoginFrame(ctk.CTkFrame):
         self.name_entry.place(relx=0.05, rely=0.34)
 
         # Password entry with icon
-        self.password_entry = IconEntry(master, icon=self.password_icon,
+        self.password_entry = IconEntry(self, icon=self.password_icon,
                                        placeholder_text="Enter your password",
                                        corner_radius=10,
                                        height=50)
@@ -66,7 +66,7 @@ class LoginFrame(ctk.CTkFrame):
 
 
         # Sign up link (left)
-        self.signup_link = ctk.CTkLabel(master, text="Sign up",
+        self.signup_link = ctk.CTkLabel(self, text="Sign up",
                                        font=ctk.CTkFont(size=20),
                                        text_color="white", bg_color="#000001",
                                        cursor="hand2")
@@ -74,7 +74,7 @@ class LoginFrame(ctk.CTkFrame):
         pywinstyles.set_opacity(self.signup_link, color="#000001")
 
         # Forgot password link (right)
-        self.forgot_link = ctk.CTkLabel(master, text="Forgot password?",
+        self.forgot_link = ctk.CTkLabel(self, text="Forgot password?",
                                        font=ctk.CTkFont(size=20),
                                        text_color="white", bg_color="#000001",
                                        cursor="hand2")
@@ -82,7 +82,7 @@ class LoginFrame(ctk.CTkFrame):
         pywinstyles.set_opacity(self.forgot_link, color="#000001")
 
         # Sign in button with white background
-        self.login_button = ctk.CTkButton(master, text="Sign in", 
+        self.login_button = ctk.CTkButton(self, text="Sign in", 
                                          command=self.get_info,
                                          fg_color="white", bg_color="#000001",
                                          text_color="black",
@@ -92,6 +92,18 @@ class LoginFrame(ctk.CTkFrame):
                                          width=660, height=75)
         self.login_button.place(relx=0.05, rely=0.57)
         pywinstyles.set_opacity(self.login_button, color="#000001")
+
+        # Exit button to exit the app
+        self.exit_button = ctk.CTkButton(self, text="Exit", 
+                        command=master.destroy,
+                        fg_color="red", bg_color="#000001",
+                        text_color="black",
+                        hover_color=("#E0E0E0", "#D0D0D0"),
+                        font=ctk.CTkFont(size=14, weight="bold"),
+                        corner_radius=25,
+                        width=50, height=40)
+        self.exit_button.place(relx=0.95, rely=0.95)
+        pywinstyles.set_opacity(self.exit_button, color="#000001")
 
     def get_info(self):
         """Get username and password and check if any corresponding name, password exists"""
