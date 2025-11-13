@@ -61,6 +61,8 @@ pip install -e .
 python main.py
 ```
 
+> The password of each user can be found in the database/user.txt file
+
 ### Alternative Installation (Using requirements.txt)
 If you prefer to use pip directly or manage your own virtual environment, run line by line:
 
