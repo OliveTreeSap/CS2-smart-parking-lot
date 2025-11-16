@@ -14,9 +14,16 @@ class MainFrameDashboard(ctk.CTkFrame):
         self.arduino = ArduinoController()
         self.current_user = ""
         
-        # Track detail panel state
-        self.detail_overlay = None
-        self.detail_panel = None
+        # Track elevator floor state
+        self.current_floor = 0
+        self.floor_var = ctk.IntVar(value=0)
+        
+        # Sensor data popup tracking
+        self.sensor_popup = None
+        self.sensor_update_job = None
+        
+        # Operation mode tracking
+        self.mode_var = ctk.StringVar(value="AUTO")
         
         # Background image
         self.background_img = ctk.CTkImage(
@@ -26,41 +33,41 @@ class MainFrameDashboard(ctk.CTkFrame):
         self.background_label = ctk.CTkLabel(self, image=self.background_img, text="")
         self.background_label.place(x=0, y=0, relwidth=1, relheight=1)
         
-        # Configure grid layout for self
+        # Configure grid layout for self - 2 column split layout
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
-        self.grid_columnconfigure(2, weight=1)
         self.grid_rowconfigure(0, weight=0)  # Top bar
         self.grid_rowconfigure(1, weight=0)  # Connection bar
-        self.grid_rowconfigure(2, weight=1)  # Cards (expandable)
-        self.grid_rowconfigure(3, weight=0)  # Overview button
-        self.grid_rowconfigure(4, weight=0)  # Welcome message
+        self.grid_rowconfigure(2, weight=1)  # Main content (expandable)
+        self.grid_rowconfigure(3, weight=0)  # Welcome message
         
         # Create UI components
         self.create_top_bar()
         self.create_connection_bar()
-        self.create_module_cards()
+        self.create_isometric_view()
+        self.create_control_panel()
         self.create_bottom_section()
     
     def create_top_bar(self):
         """Create the top bar with branding and logout button"""
         # Logo (directly on self, not in a frame)
-        self.company_name = ctk.CTkLabel(
+        self.logo = ctk.CTkLabel(
             self,
             text="SPKL",
             font=ctk.CTkFont("Broadway", size=50, weight="bold"),
             text_color="white",
             bg_color='#000001'
         )
-        self.company_name.grid(row=0, column=0, columnspan=2, padx=50, pady=(50, 20), sticky="w")
-        pywinstyles.set_opacity(self.company_name, color="#000001")
+        # self.logo.grid(row=0, column=0, columnspan=2, padx=50, pady=(50, 20), sticky="w")
+        self.logo.place(relx=0.04, rely=0.02)
+        pywinstyles.set_opacity(self.logo, color="#000001")
         
         # Logout button
         self.logout_button = ctk.CTkButton(
             self,
             text="Logout",
             command=self.logout,
-            font=ctk.CTkFont(size=24, weight="bold"),
+            font=ctk.CTkFont("Bahnschrift Condensed", size=24),
             fg_color="transparent",
             text_color="white",
             hover_color=("#404040", "#303030"),
@@ -90,7 +97,7 @@ class MainFrameDashboard(ctk.CTkFrame):
         self.status_label = ctk.CTkLabel(
             self.connection_bar,
             text="● Disconnected",
-            font=ctk.CTkFont(size=24, weight="bold"),
+            font=ctk.CTkFont("Tw Cen MT Condensed Extra Bold", size=24),
             text_color="red"
         )
         self.status_label.grid(row=0, column=0, padx=20, pady=20, sticky="w")
@@ -99,7 +106,7 @@ class MainFrameDashboard(ctk.CTkFrame):
         ctk.CTkLabel(
             self.connection_bar,
             text="COM port:",
-            font=ctk.CTkFont(size=24),
+            font=ctk.CTkFont("Bahnschrift Light Condensed", size=24),
             text_color="white"
         ).grid(row=0, column=1, padx=5, pady=20, sticky="e")
         
@@ -109,7 +116,7 @@ class MainFrameDashboard(ctk.CTkFrame):
             self.connection_bar,
             variable=self.port_var,
             values=self.get_available_ports(),
-            font=ctk.CTkFont(size=24),
+            font=ctk.CTkFont("Bahnschrift Light Condensed", size=24),
             width=250,
             height=40,
             fg_color=("#505050", "#404040"),
@@ -122,7 +129,7 @@ class MainFrameDashboard(ctk.CTkFrame):
             self.connection_bar,
             text="⟳",
             command=self.refresh_ports,
-            font=ctk.CTkFont(size=24),
+            font=ctk.CTkFont("Bahnschrift Light Condensed", size=24),
             width=50,
             height=40,
             fg_color=("#505050", "#404040"),
@@ -135,7 +142,7 @@ class MainFrameDashboard(ctk.CTkFrame):
             self.connection_bar,
             text="Connect",
             command=self.toggle_connection,
-            font=ctk.CTkFont(size=24, weight="bold"),
+            font=ctk.CTkFont("Bahnschrift Light Condensed", size=24, weight="bold"),
             width=140,
             height=40,
             fg_color=("#4CAF50", "#45a049"),
@@ -143,300 +150,368 @@ class MainFrameDashboard(ctk.CTkFrame):
         )
         self.connect_button.grid(row=0, padx=(5, 20), pady=20, column=4, sticky="e")
     
-    def create_module_cards(self):
-        """Create the three module cards (Barriers, Elevator, LED)"""
-        # Load images
-        self.barriers_img = ctk.CTkImage(
-            dark_image=Image.open("assets/gates.jpg"),
-            size=(450, 450)
-        )
-        self.elevator_img = ctk.CTkImage(
-            dark_image=Image.open("assets/elevator.jpg"),
-            size=(450, 450)
-        )
-        self.led_img = ctk.CTkImage(
-            dark_image=Image.open("assets/lights.jpg"),
-            size=(450, 450)
+    def create_isometric_view(self):
+        """Create the left side isometric parking lot view"""
+        # Load parking lot overview image
+        self.parking_lot_img = ctk.CTkImage(
+            dark_image=Image.open("assets/parking_lot_overview.png"),
+            size=(1280, 720)
         )
         
-        # Card configurations
-        cards = [
-            {"name": "Barriers", "image": self.barriers_img, "column": 0},
-            {"name": "Elevator", "image": self.elevator_img, "column": 1},
-            {"name": "LED", "image": self.led_img, "column": 2}
-        ]
-        
-        for card_info in cards:
-            self.create_card(
-                card_info["name"],
-                card_info["image"],
-                card_info["column"]
-            )
-    
-    def create_card(self, title, image, column):
-        """Create a single module card"""
-        # Card frame
-        card_frame = ctk.CTkFrame(
+        # Create image label
+        self.parking_lot_label = ctk.CTkLabel(
             self,
-            corner_radius=15,
-            fg_color="#757575", bg_color="#000001",
-            cursor="hand2"
-        )
-        card_frame.grid(row=2, column=column, padx=50, pady=20, sticky="nsew")
-        pywinstyles.set_opacity(card_frame, color="#000001")
-        
-        # Make card clickable
-        card_frame.bind("<Button-1>", lambda e, t=title: self.show_detail_panel(t))
-        
-        # Image
-        img_label = ctk.CTkLabel(
-            card_frame,
-            image=image,
+            image=self.parking_lot_img,
             text="",
-            cursor="hand2"
-        )
-        img_label.pack(padx=10, pady=(10, 5), expand=True, fill="both")
-        img_label.bind("<Button-1>", lambda e, t=title: self.show_detail_panel(t))
-        
-        # Title
-        title_label = ctk.CTkLabel(
-            card_frame,
-            text=title,
-            font=ctk.CTkFont(size=24, weight="bold"),
-            text_color="white",
-            cursor="hand2"
-        )
-        title_label.pack(padx=10, pady=(5, 10))
-        title_label.bind("<Button-1>", lambda e, t=title: self.show_detail_panel(t))
-    
-    def create_bottom_section(self):
-        """Create the Overview button and welcome message"""
-        # Overview button
-        self.overview_button = ctk.CTkButton(
-            self,
-            text="Overview",
-            font=ctk.CTkFont(size=24, weight="bold"),
-            width=200,
-            height=50,
-            fg_color=("#505050", "#404040"),
-            hover_color=("#606060", "#505050"),
-            corner_radius=25,
             bg_color='#000001'
         )
-        self.overview_button.grid(row=3, column=0, columnspan=3, padx=20, pady=(10, 20))
-        pywinstyles.set_opacity(self.overview_button, color="#000001")
+        self.parking_lot_label.place(x=50, y=240)
+        pywinstyles.set_opacity(self.parking_lot_label, color="#000001")
+    
+    def create_control_panel(self):
+        """Create the right side control panel with all controls"""
+        # Main control panel frame (now scrollable)
+        self.control_panel = ctk.CTkFrame(
+            self,
+            fg_color="#757575",
+            bg_color='#000001',
+            corner_radius=15,
+            width=490, height=720,
+        )
+        # self.control_panel.grid(row=2, column=2, padx=(25, 50), pady=20, sticky="nsew")
+        self.control_panel.place(x=1380, y=240)
+        self.control_panel.grid_propagate(False)  # Prevent child widgets from overriding width/height
+        pywinstyles.set_opacity(self.control_panel, color="#000001")
         
+        # Configure grid for control panel
+        self.control_panel.grid_columnconfigure(0, weight=1)
+        
+        # Track current row for grid layout
+        self.current_row = 0
+        
+        # Control panel header
+        header = ctk.CTkLabel(
+            self.control_panel,
+            text="CONTROL PANEL",
+            font=ctk.CTkFont("Tw Cen MT Condensed Extra Bold", size=36, weight="bold"),
+            text_color="white"
+        )
+        header.grid(row=self.current_row, column=0, pady=(20, 10), sticky="ew")
+        self.current_row += 1
+        
+        # Separator line
+        separator = ctk.CTkFrame(self.control_panel, height=2, fg_color="white")
+        separator.grid(row=self.current_row, column=0, sticky="ew", padx=40, pady=(0, 20))
+        self.current_row += 1
+        
+        # Create mode toggle section
+        self.create_mode_toggle()
+        
+        # Create control sections directly in control_panel
+        self.create_barrier_controls()
+        self.create_elevator_controls()
+        self.create_rain_shelter_controls()
+        self.create_light_controls()
+        self.create_overview_button_in_panel()
+    
+    def create_mode_toggle(self):
+        """Create Auto/Manual mode toggle"""
+        # Mode section header
+        mode_label = ctk.CTkLabel(
+            self.control_panel,
+            text="● Operation Mode",
+            font=ctk.CTkFont("Bahnschrift Light Condensed", size=30, weight="bold"),
+            text_color="white",
+            anchor="w"
+        )
+        mode_label.grid(row=self.current_row, column=0, sticky="ew", padx=10, pady=(10, 5))
+        self.current_row += 1
+        
+        # Mode toggle frame
+        mode_frame = ctk.CTkFrame(self.control_panel, fg_color="transparent")
+        mode_frame.grid(row=self.current_row, column=0, sticky="ew", padx=15, pady=5)
+        self.current_row += 1
+        
+        mode_frame.grid_columnconfigure(0, weight=0)
+        mode_frame.grid_columnconfigure(1, weight=1)
+        
+        # Mode label (shows current mode)
+        self.mode_status_label = ctk.CTkLabel(
+            mode_frame,
+            text="AUTO",
+            font=ctk.CTkFont("Bahnschrift Light Condensed", size=24, weight="bold"),
+            text_color="#4CAF50",
+            width=100,
+            anchor="w"
+        )
+        self.mode_status_label.grid(row=0, column=0, padx=(30, 20), sticky="w")
+        
+        # Mode switch button
+        self.mode_switch = ctk.CTkSwitch(
+            mode_frame,
+            text="MANUAL",
+            progress_color=("#FF9800", "#F57C00"),
+            variable=ctk.BooleanVar(value=False),
+            command=self.toggle_mode,
+            width=60,
+            height=28,
+            font=ctk.CTkFont("Bahnschrift Light Condensed", size=20)
+        )
+        self.mode_switch.grid(row=0, column=1, sticky="w")
+        
+        # Add spacing after mode section
+        spacing = ctk.CTkFrame(self.control_panel, height=10, fg_color="transparent")
+        spacing.grid(row=self.current_row, column=0)
+        self.current_row += 1
+    
+    def create_barrier_controls(self):
+        """Create barrier IN/OUT toggle controls"""
+        # Barriers section header
+        barrier_label = ctk.CTkLabel(
+            self.control_panel,
+            text="● Barriers",
+            font=ctk.CTkFont("Bahnschrift Light Condensed", size=30, weight="bold"),
+            text_color="white",
+            anchor="w"
+        )
+        barrier_label.grid(row=self.current_row, column=0, sticky="ew", padx=10, pady=(10, 5))
+        self.current_row += 1
+        
+        # IN Barrier control
+        in_frame = ctk.CTkFrame(self.control_panel, fg_color="transparent")
+        in_frame.grid(row=self.current_row, column=0, sticky="ew", padx=15, pady=5)
+        self.current_row += 1
+        
+        in_frame.grid_columnconfigure(1, weight=1)
+        
+        ctk.CTkLabel(
+            in_frame,
+            text="IN",
+            font=ctk.CTkFont("Bahnschrift Light Condensed", size=24),
+            text_color="white",
+            width=80,
+            anchor="w"
+        ).grid(row=0, column=0, padx=(30, 20), sticky="w")
+        
+        self.barrier_in_var = ctk.BooleanVar(value=False)
+        self.barrier_in_switch = ctk.CTkSwitch(
+            in_frame,
+            text="ON" if self.barrier_in_var.get() else "OFF",
+            progress_color=("#4CAF50", "#45a049"),
+            variable=self.barrier_in_var,
+            command=self.toggle_barrier_in,
+            width=60,
+            height=28,
+            font=ctk.CTkFont("Bahnschrift Light Condensed", size=20)
+        )
+        self.barrier_in_switch.grid(row=0, column=1, sticky="w")
+        
+        # OUT Barrier control
+        out_frame = ctk.CTkFrame(self.control_panel, fg_color="transparent")
+        out_frame.grid(row=self.current_row, column=0, sticky="ew", padx=15, pady=5)
+        self.current_row += 1
+        
+        out_frame.grid_columnconfigure(1, weight=1)
+        
+        ctk.CTkLabel(
+            out_frame,
+            text="OUT",
+            font=ctk.CTkFont("Bahnschrift Light Condensed", size=24),
+            text_color="white",
+            width=80,
+            anchor="w"
+        ).grid(row=0, column=0, padx=(30, 20), sticky="w")
+        
+        self.barrier_out_var = ctk.BooleanVar(value=False)
+        self.barrier_out_switch = ctk.CTkSwitch(
+            out_frame,
+            text="ON" if self.barrier_out_var.get() else "OFF",
+            progress_color=("#4CAF50", "#45a049"),
+            variable=self.barrier_out_var,
+            command=self.toggle_barrier_out,
+            width=60,
+            height=28,
+            font=ctk.CTkFont("Bahnschrift Light Condensed", size=20)
+        )
+        self.barrier_out_switch.grid(row=0, column=1, sticky="w")
+    
+    def create_elevator_controls(self):
+        """Create elevator floor selection radio buttons"""
+        # Elevator section header
+        elevator_label = ctk.CTkLabel(
+            self.control_panel,
+            text="● Elevator",
+            font=ctk.CTkFont("Bahnschrift Light Condensed", size=30, weight="bold"),
+            text_color="white",
+            anchor="w"
+        )
+        elevator_label.grid(row=self.current_row, column=0, sticky="ew", padx=10, pady=(20, 5))
+        self.current_row += 1
+        
+        # Radio buttons for floors
+        floors = [
+            ("Ground floor", 0),
+            ("1st floor", 1),
+            ("2nd floor", 2)
+        ]
+        
+        for floor_name, floor_num in floors:
+            radio_btn = ctk.CTkRadioButton(
+                self.control_panel,
+                text=floor_name,
+                fg_color=("#4CAF50", "#45a049"),
+                variable=self.floor_var,
+                value=floor_num,
+                command=lambda f=floor_num: self.select_floor(f),
+                font=ctk.CTkFont("Bahnschrift Light Condensed", size=24),
+                text_color="white"
+            )
+            radio_btn.grid(row=self.current_row, column=0, sticky="w", padx=40, pady=5)
+            self.current_row += 1
+    
+    def create_rain_shelter_controls(self):
+        """Create rain shelter toggle control"""
+        # Rain shelter section header
+        shelter_label = ctk.CTkLabel(
+            self.control_panel,
+            text="● Rain shelter",
+            font=ctk.CTkFont("Bahnschrift Light Condensed", size=30, weight="bold"),
+            text_color="white",
+            anchor="w"
+        )
+        shelter_label.grid(row=self.current_row, column=0, sticky="ew", padx=10, pady=(20, 5))
+        self.current_row += 1
+        
+        # Rain shelter toggle
+        shelter_frame = ctk.CTkFrame(self.control_panel, fg_color="transparent")
+        shelter_frame.grid(row=self.current_row, column=0, sticky="ew", padx=30, pady=5)
+        self.current_row += 1
+        
+        self.rain_shelter_var = ctk.BooleanVar(value=False)
+        self.rain_shelter_switch = ctk.CTkSwitch(
+            shelter_frame,
+            text="OFF",
+            progress_color=("#4CAF50", "#45a049"),
+            variable=self.rain_shelter_var,
+            command=self.toggle_rain_shelter,
+            width=60,
+            height=28,
+            font=ctk.CTkFont("Bahnschrift Light Condensed", size=20)
+        )
+        self.rain_shelter_switch.grid(row=0, column=0, padx=15, sticky="w")
+    
+    def create_light_controls(self):
+        """Create light toggle control"""
+        # Light section header
+        light_label = ctk.CTkLabel(
+            self.control_panel,
+            text="● Lights",
+            font=ctk.CTkFont("Bahnschrift Light Condensed", size=30, weight="bold"),
+            text_color="white",
+            anchor="w"
+        )
+        light_label.grid(row=self.current_row, column=0, sticky="ew", padx=10, pady=(20, 5))
+        self.current_row += 1
+        
+        # Light toggle
+        light_frame = ctk.CTkFrame(self.control_panel, fg_color="transparent")
+        light_frame.grid(row=self.current_row, column=0, sticky="ew", padx=30, pady=5)
+        self.current_row += 1
+        
+        self.light_var = ctk.BooleanVar(value=False)
+        self.light_switch = ctk.CTkSwitch(
+            light_frame,
+            text="OFF",
+            progress_color=("#4CAF50", "#45a049"),
+            variable=self.light_var,
+            command=self.toggle_light,
+            width=60,
+            height=28,
+            font=ctk.CTkFont("Bahnschrift Light Condensed", size=20)
+        )
+        self.light_switch.grid(row=0, column=0, padx=15, sticky="w")
+    
+    def create_overview_button_in_panel(self):
+        """Create overview button at bottom of control panel"""
+        # Overview button (moved from bottom section)
+        self.overview_button = ctk.CTkButton(
+            self.control_panel,
+            text="Sensor data",
+            command=self.show_sensor_data,
+            font=ctk.CTkFont("Bahnschrift Light Condensed", size=30, weight="bold"),
+            width=200,
+            height=45,
+            fg_color=("#505050", "#404040"),
+            hover_color=("#606060", "#505050"),
+            corner_radius=10
+        )
+        self.overview_button.grid(row=self.current_row, column=0, pady=(30, 10))
+        self.current_row += 1
+    
+    def create_bottom_section(self):
+        """Create the welcome message"""
         # Welcome message
         self.welcome_label = ctk.CTkLabel(
             self,
             text="WELCOME BACK, KHANH",
-            font=ctk.CTkFont(size=72, weight="bold"),
+            font=ctk.CTkFont("Tw Cen MT Condensed Extra Bold", size=72),
             text_color="white",
             bg_color='#000001'
         )
-        self.welcome_label.grid(row=4, column=0, columnspan=3, padx=20, pady=(10, 20))
+        self.welcome_label.grid(row=3, column=0, columnspan=2, padx=20, pady=(10, 20))
         pywinstyles.set_opacity(self.welcome_label, color="#000001")
     
-    def show_detail_panel(self, module_name):
-        """Show detail panel overlay for a specific module"""
-        # Create semi-transparent overlay
-        self.detail_overlay = ctk.CTkFrame(
-            self,
-            fg_color=("#000000", "#000000")
-        )
-        self.detail_overlay.place(relx=0, rely=0, relwidth=1, relheight=1)
-        pywinstyles.set_opacity(self.detail_overlay, 0.7)
+    # Control handler methods
+    def toggle_mode(self):
+        """Toggle between AUTO and MANUAL mode"""
+        is_manual = self.mode_switch.get()
         
-        # Make overlay dismissible
-        self.detail_overlay.bind("<Button-1>", lambda e: self.close_detail_panel())
-        
-        # Create detail panel
-        self.detail_panel = ctk.CTkFrame(
-            self.detail_overlay,
-            fg_color=("#2b2b2b", "#1e1e1e"),
-            corner_radius=20,
-            border_width=2,
-            border_color="white"
-        )
-        self.detail_panel.place(relx=0.5, rely=0.5, anchor="center", relwidth=0.5, relheight=0.5)
-        
-        # Prevent clicks on panel from closing it
-        self.detail_panel.bind("<Button-1>", lambda e: "break")
-        
-        # Close button
-        close_btn = ctk.CTkButton(
-            self.detail_panel,
-            text="✕",
-            command=self.close_detail_panel,
-            font=ctk.CTkFont(size=24, weight="bold"),
-            width=50,
-            height=50,
-            fg_color="transparent",
-            hover_color=("#404040", "#303030"),
-            text_color="white"
-        )
-        close_btn.place(relx=0.95, rely=0.02, anchor="ne")
-        
-        # Panel title
-        title = ctk.CTkLabel(
-            self.detail_panel,
-            text=f"{module_name} Control",
-            font=ctk.CTkFont(size=36, weight="bold"),
-            text_color="white"
-        )
-        title.place(relx=0.5, rely=0.08, anchor="center")
-        
-        # Module-specific controls
-        self.create_module_controls(module_name, self.detail_panel)
+        if is_manual:
+            # Switch to MANUAL mode
+            self.mode_var.set("MANUAL")
+            self.mode_status_label.configure(text="MANUAL", text_color="#FF9800")
+            self.send_command("MODE_MANUAL")
+            print("Switched to MANUAL mode")
+        else:
+            # Switch to AUTO mode
+            self.mode_var.set("AUTO")
+            self.mode_status_label.configure(text="AUTO", text_color="#4CAF50")
+            self.send_command("MODE_AUTO")
+            print("Switched to AUTO mode")
     
-    def create_module_controls(self, module_name, parent):
-        """Create controls specific to each module"""
-        controls_frame = ctk.CTkFrame(parent, fg_color="transparent")
-        controls_frame.place(relx=0.5, rely=0.55, anchor="center", relwidth=0.9, relheight=0.75)
-        
-        if module_name == "Barriers":
-            # Barrier controls
-            ctk.CTkLabel(
-                controls_frame,
-                text="Control the parking barrier gates",
-                font=ctk.CTkFont(size=18),
-                text_color="gray"
-            ).pack(pady=20)
-            
-            ctk.CTkButton(
-                controls_frame,
-                text="Open Barrier",
-                command=lambda: self.send_command("BARRIER_OPEN"),
-                font=ctk.CTkFont(size=20, weight="bold"),
-                width=300,
-                height=60,
-                fg_color=("#4CAF50", "#45a049")
-            ).pack(pady=15)
-            
-            ctk.CTkButton(
-                controls_frame,
-                text="Close Barrier",
-                command=lambda: self.send_command("BARRIER_CLOSE"),
-                font=ctk.CTkFont(size=20, weight="bold"),
-                width=300,
-                height=60,
-                fg_color=("#f44336", "#da190b")
-            ).pack(pady=15)
-            
-            ctk.CTkButton(
-                controls_frame,
-                text="Stop Barrier",
-                command=lambda: self.send_command("BARRIER_STOP"),
-                font=ctk.CTkFont(size=20, weight="bold"),
-                width=300,
-                height=60,
-                fg_color=("#FF9800", "#F57C00")
-            ).pack(pady=15)
-            
-        elif module_name == "Elevator":
-            # Elevator controls
-            ctk.CTkLabel(
-                controls_frame,
-                text="Control the building elevator",
-                font=ctk.CTkFont(size=18),
-                text_color="gray"
-            ).pack(pady=20)
-            
-            ctk.CTkButton(
-                controls_frame,
-                text="Move Up",
-                command=lambda: self.send_command("ELEVATOR_UP"),
-                font=ctk.CTkFont(size=20, weight="bold"),
-                width=300,
-                height=60,
-                fg_color=("#2196F3", "#0b7dda")
-            ).pack(pady=15)
-            
-            ctk.CTkButton(
-                controls_frame,
-                text="Move Down",
-                command=lambda: self.send_command("ELEVATOR_DOWN"),
-                font=ctk.CTkFont(size=20, weight="bold"),
-                width=300,
-                height=60,
-                fg_color=("#9C27B0", "#7B1FA2")
-            ).pack(pady=15)
-            
-            ctk.CTkButton(
-                controls_frame,
-                text="Stop Elevator",
-                command=lambda: self.send_command("ELEVATOR_STOP"),
-                font=ctk.CTkFont(size=20, weight="bold"),
-                width=300,
-                height=60,
-                fg_color=("#FF9800", "#F57C00")
-            ).pack(pady=15)
-            
-        elif module_name == "LED":
-            # LED controls
-            ctk.CTkLabel(
-                controls_frame,
-                text="Control the building lighting system",
-                font=ctk.CTkFont(size=18),
-                text_color="gray"
-            ).pack(pady=20)
-            
-            # LED toggles
-            self.led_switches = {}
-            for i in range(1, 6):
-                switch_frame = ctk.CTkFrame(controls_frame, fg_color="transparent")
-                switch_frame.pack(pady=10, fill="x")
-                
-                ctk.CTkLabel(
-                    switch_frame,
-                    text=f"LED {i}:",
-                    font=ctk.CTkFont(size=18),
-                    text_color="white"
-                ).pack(side="left", padx=20)
-                
-                switch_var = ctk.BooleanVar(value=False)
-                switch = ctk.CTkSwitch(
-                    switch_frame,
-                    text="",
-                    variable=switch_var,
-                    command=lambda num=i, var=switch_var: self.toggle_led(num, var),
-                    width=80,
-                    height=35
-                )
-                switch.pack(side="left", padx=20)
-                self.led_switches[i] = switch_var
-            
-            # All on/off buttons
-            btn_frame = ctk.CTkFrame(controls_frame, fg_color="transparent")
-            btn_frame.pack(pady=20)
-            
-            ctk.CTkButton(
-                btn_frame,
-                text="All ON",
-                command=self.all_leds_on,
-                font=ctk.CTkFont(size=18, weight="bold"),
-                width=150,
-                height=50,
-                fg_color=("#4CAF50", "#45a049")
-            ).pack(side="left", padx=10)
-            
-            ctk.CTkButton(
-                btn_frame,
-                text="All OFF",
-                command=self.all_leds_off,
-                font=ctk.CTkFont(size=18, weight="bold"),
-                width=150,
-                height=50,
-                fg_color=("#f44336", "#da190b")
-            ).pack(side="left", padx=10)
+    def toggle_barrier_in(self):
+        """Toggle IN barrier"""
+        state = self.barrier_in_var.get()
+        command = "BARRIER_IN_OPEN" if state else "BARRIER_IN_CLOSE"
+        self.barrier_in_switch.configure(text="ON" if state else "OFF")
+        self.send_command(command)
     
-    def close_detail_panel(self):
-        """Close the detail panel overlay"""
-        if self.detail_overlay:
-            self.detail_overlay.destroy()
-            self.detail_overlay = None
-        if self.detail_panel:
-            self.detail_panel = None
+    def toggle_barrier_out(self):
+        """Toggle OUT barrier"""
+        state = self.barrier_out_var.get()
+        command = "BARRIER_OUT_OPEN" if state else "BARRIER_OUT_CLOSE"
+        self.barrier_out_switch.configure(text="ON" if state else "OFF")
+        self.send_command(command)
+    
+    def select_floor(self, floor_num):
+        """Send elevator to selected floor"""
+        self.current_floor = floor_num
+        command = f"ELEVATOR_FLOOR_{floor_num}"
+        self.send_command(command)
+    
+    def toggle_rain_shelter(self):
+        """Toggle rain shelter"""
+        state = self.rain_shelter_var.get()
+        command = "RAIN_SHELTER_ON" if state else "RAIN_SHELTER_OFF"
+        self.rain_shelter_switch.configure(text="ON" if state else "OFF")
+        self.send_command(command)
+    
+    def toggle_light(self):
+        """Toggle light system"""
+        state = self.light_var.get()
+        command = "LED_ALL_ON" if state else "LED_ALL_OFF"
+        self.light_switch.configure(text="ON" if state else "OFF")
+        self.send_command(command)
     
     def get_available_ports(self):
         """Get list of available COM ports"""
@@ -522,38 +597,6 @@ class MainFrameDashboard(ctk.CTkFrame):
         else:
             self.show_error("Failed to send command")
     
-    def toggle_led(self, led_num, var):
-        """Toggle LED on/off"""
-        if not self.arduino.is_connected():
-            self.show_error("Not connected to Arduino")
-            var.set(not var.get())
-            return
-        
-        state = "ON" if var.get() else "OFF"
-        command = f"LED_{led_num}_{state}"
-        self.send_command(command)
-    
-    def all_leds_on(self):
-        """Turn all LEDs on"""
-        if not self.arduino.is_connected():
-            self.show_error("Not connected to Arduino")
-            return
-        
-        for i in range(1, 6):
-            self.send_command(f"LED_{i}_ON")
-            if i in self.led_switches:
-                self.led_switches[i].set(True)
-    
-    def all_leds_off(self):
-        """Turn all LEDs off"""
-        if not self.arduino.is_connected():
-            self.show_error("Not connected to Arduino")
-            return
-        
-        for i in range(1, 6):
-            self.send_command(f"LED_{i}_OFF")
-            if i in self.led_switches:
-                self.led_switches[i].set(False)
     
     def show_error(self, message):
         """Display an error message"""
@@ -567,12 +610,135 @@ class MainFrameDashboard(ctk.CTkFrame):
     
     def logout(self):
         """Handle logout and return to login screen"""
+        # Close sensor popup if open
+        if self.sensor_popup is not None:
+            self.close_sensor_popup()
+        
         # Disconnect Arduino before logging out
         if self.arduino.is_connected():
             self.disconnect_arduino()
         
-        # Close any open detail panels
-        self.close_detail_panel()
-        
         self.master.show_login()
+    
+    def show_sensor_data(self):
+        """Display sensor data in a popup window"""
+        # Check if Arduino is connected
+        if not self.arduino.is_connected():
+            self.show_error("Arduino is not connected. Please connect first.")
+            return
+        
+        # If popup already exists, bring it to front
+        if self.sensor_popup is not None and self.sensor_popup.winfo_exists():
+            self.sensor_popup.focus()
+            return
+        
+        # Create popup window
+        self.sensor_popup = ctk.CTkToplevel(self)
+        self.sensor_popup.title("Sensor Data Overview")
+        self.sensor_popup.geometry("600x400")
+        self.sensor_popup.resizable(False, False)
+        
+        # Center the window
+        self.sensor_popup.update_idletasks()
+        x = (self.sensor_popup.winfo_screenwidth() // 2) - (600 // 2)
+        y = (self.sensor_popup.winfo_screenheight() // 2) - (400 // 2)
+        self.sensor_popup.geometry(f"600x400+{x}+{y}")
+        
+        # Make it stay on top initially
+        self.sensor_popup.attributes('-topmost', True)
+        self.sensor_popup.after(100, lambda: self.sensor_popup.attributes('-topmost', False))
+        
+        # Header
+        header = ctk.CTkLabel(
+            self.sensor_popup,
+            text="SENSOR DATA",
+            font=ctk.CTkFont("Tw Cen MT Condensed Extra Bold", size=32, weight="bold"),
+            text_color="white"
+        )
+        header.pack(pady=(20, 10))
+        
+        # Separator
+        separator = ctk.CTkFrame(self.sensor_popup, height=2, fg_color="gray")
+        separator.pack(fill="x", padx=40, pady=(0, 20))
+        
+        # Data display area (using CTkTextbox for better formatting)
+        self.sensor_data_display = ctk.CTkTextbox(
+            self.sensor_popup,
+            font=ctk.CTkFont("Consolas", size=18),
+            width=540,
+            height=220,
+            fg_color=("#2b2b2b", "#1a1a1a"),
+            text_color="white",
+            wrap="none"
+        )
+        self.sensor_data_display.pack(pady=10, padx=30)
+        
+        # Close button
+        close_button = ctk.CTkButton(
+            self.sensor_popup,
+            text="Close",
+            command=self.close_sensor_popup,
+            font=ctk.CTkFont("Bahnschrift Light Condensed", size=20, weight="bold"),
+            width=150,
+            height=40,
+            fg_color=("#f44336", "#da190b"),
+            hover_color=("#da190b", "#b71c1c")
+        )
+        close_button.pack(pady=(10, 20))
+        
+        # Bind window close event
+        self.sensor_popup.protocol("WM_DELETE_WINDOW", self.close_sensor_popup)
+        
+        # Start updating sensor data
+        self.update_sensor_display()
+    
+    def update_sensor_display(self):
+        """Continuously read and update sensor data display"""
+        # Check if popup still exists
+        if self.sensor_popup is None or not self.sensor_popup.winfo_exists():
+            self.sensor_update_job = None
+            return
+        
+        # Read available data from Arduino buffer
+        # With Arduino sending at reasonable rate (100-200ms), read a few times
+        # to ensure we get the latest data
+        data_read = False
+        for _ in range(10):  # Read up to 10 times to get latest data
+            if self.arduino.read_data():
+                data_read = True
+            else:
+                break  # No more data available
+        
+        # Get all sensor values
+        sensor_values = self.arduino.get_all_values()
+        
+        # Format the data for display
+        if sensor_values:
+            display_text = ""
+            for label, value in sensor_values.items():
+                display_text += f"{label}: {value}\n"
+            
+            # Update the textbox
+            self.sensor_data_display.delete("1.0", "end")
+            self.sensor_data_display.insert("1.0", display_text)
+        else:
+            # No data available yet
+            self.sensor_data_display.delete("1.0", "end")
+            self.sensor_data_display.insert("1.0", "Waiting for sensor data...\n\nMake sure Arduino is:\n1. Connected\n2. Sending sensor data")
+        
+        # Schedule next update (200ms for smooth updates)
+        self.sensor_update_job = self.after(200, self.update_sensor_display)
+    
+    def close_sensor_popup(self):
+        """Close the sensor data popup and stop updates"""
+        # Cancel scheduled updates
+        if self.sensor_update_job is not None:
+            self.after_cancel(self.sensor_update_job)
+            self.sensor_update_job = None
+        
+        # Close popup window
+        if self.sensor_popup is not None and self.sensor_popup.winfo_exists():
+            self.sensor_popup.destroy()
+        
+        self.sensor_popup = None
 

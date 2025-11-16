@@ -49,5 +49,5 @@ class App(ctk.CTk):
 
 if __name__ == "__main__":
     app = App()
-    # app.attributes("-fullscreen", "True")
+    app.attributes("-fullscreen", "True")
     app.mainloop()

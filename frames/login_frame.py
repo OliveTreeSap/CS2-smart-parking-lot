@@ -24,21 +24,21 @@ class LoginFrame(ctk.CTkFrame):
 
         # Login title
         self.title = ctk.CTkLabel(self, text="LOGIN", 
-                                   font=ctk.CTkFont(size=75, weight="bold"),
+                                   font=ctk.CTkFont("Tw Cen MT Condensed Extra Bold", size=75),
                                    text_color="white", bg_color='#000001')
         self.title.place(relx=0.05, rely=0.15)
         pywinstyles.set_opacity(self.title, color="#000001")
 
         # Welcome back subtitle
         self.welcome_text = ctk.CTkLabel(self, text="Welcome back", 
-                                        font=ctk.CTkFont(size=24),
+                                        font=ctk.CTkFont("Bahnschrift Light Condensed", size=24),
                                         text_color="white", bg_color="#000001")
         self.welcome_text.place(relx=0.05, rely=0.25)
         pywinstyles.set_opacity(self.welcome_text, color="#000001")
 
         # Please enter your information text
         self.info_text = ctk.CTkLabel(self, text="Please enter your information",
-                                      font=ctk.CTkFont(size=24),
+                                      font=ctk.CTkFont("Bahnschrift Light Condensed", size=24),
                                       text_color="white", bg_color="#000001")
         self.info_text.place(relx=0.05, rely=0.28)
         pywinstyles.set_opacity(self.info_text, color="#000001")
@@ -67,7 +67,7 @@ class LoginFrame(ctk.CTkFrame):
 
         # Sign up link (left)
         self.signup_link = ctk.CTkLabel(self, text="Sign up",
-                                       font=ctk.CTkFont(size=20),
+                                       font=ctk.CTkFont("Bahnschrift Light Condensed", size=20),
                                        text_color="white", bg_color="#000001",
                                        cursor="hand2")
         self.signup_link.place(relx=0.05, rely=0.522)
@@ -75,10 +75,10 @@ class LoginFrame(ctk.CTkFrame):
 
         # Forgot password link (right)
         self.forgot_link = ctk.CTkLabel(self, text="Forgot password?",
-                                       font=ctk.CTkFont(size=20),
+                                       font=ctk.CTkFont("Bahnschrift Light Condensed", size=20),
                                        text_color="white", bg_color="#000001",
                                        cursor="hand2")
-        self.forgot_link.place(relx=0.314, rely=0.522)
+        self.forgot_link.place(relx=0.334, rely=0.522)
         pywinstyles.set_opacity(self.forgot_link, color="#000001")
 
         # Sign in button with white background
@@ -87,7 +87,7 @@ class LoginFrame(ctk.CTkFrame):
                                          fg_color="white", bg_color="#000001",
                                          text_color="black",
                                          hover_color=("#E0E0E0", "#D0D0D0"),
-                                         font=ctk.CTkFont(size=24, weight="bold"),
+                                         font=ctk.CTkFont("Tw Cen MT Condensed Extra Bold", size=34),
                                          corner_radius=25,
                                          width=660, height=75)
         self.login_button.place(relx=0.05, rely=0.57)
@@ -99,7 +99,7 @@ class LoginFrame(ctk.CTkFrame):
                         fg_color="gray", bg_color="#000001",
                         text_color="white",
                         hover_color=("#505050", "#404040"),
-                        font=ctk.CTkFont(size=14, weight="bold"),
+                        font=ctk.CTkFont("Bahnschrift Light Condensed", size=14, weight="bold"),
                         corner_radius=25,
                         width=100, height=40)
         self.back_button.place(relx=0.015, rely=0.9)
@@ -111,7 +111,7 @@ class LoginFrame(ctk.CTkFrame):
                         fg_color="red", bg_color="#000001",
                         text_color="black",
                         hover_color=("#E0E0E0", "#D0D0D0"),
-                        font=ctk.CTkFont(size=14, weight="bold"),
+                        font=ctk.CTkFont("Bahnschrift Light Condensed", size=14, weight="bold"),
                         corner_radius=25,
                         width=100, height=40)
         self.exit_button.place(relx=0.015, rely=0.95)

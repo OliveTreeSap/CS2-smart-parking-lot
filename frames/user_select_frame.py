@@ -28,7 +28,7 @@ class PasswordDialog(ctk.CTkToplevel):
         self.username_label = ctk.CTkLabel(
             self, 
             text=f"Welcome, {username}!",
-            font=ctk.CTkFont(size=24, weight="bold")
+            font=ctk.CTkFont("Tw Cen MT Condensed Extra Bold", size=24)
         )
         self.username_label.pack(pady=(30, 10))
         
@@ -36,7 +36,7 @@ class PasswordDialog(ctk.CTkToplevel):
         self.instruction_label = ctk.CTkLabel(
             self,
             text="Please enter your password",
-            font=ctk.CTkFont(size=14)
+            font=ctk.CTkFont("Bahnschrift Light Condensed", size=18)
         )
         self.instruction_label.pack(pady=(0, 20))
         
@@ -60,7 +60,7 @@ class PasswordDialog(ctk.CTkToplevel):
         # Cancel button
         self.cancel_button = ctk.CTkButton(
             self.button_frame,
-            text="Cancel",
+            text="Cancel", font=ctk.CTkFont("Bahnschrift Light Condensed", size=18),
             command=self.destroy,
             width=120,
             height=35,
@@ -72,7 +72,7 @@ class PasswordDialog(ctk.CTkToplevel):
         # Submit button
         self.submit_button = ctk.CTkButton(
             self.button_frame,
-            text="Submit", text_color="#000000",
+            text="Submit", text_color="#000000", font=ctk.CTkFont("Bahnschrift Light Condensed", size=18),
             command=self.verify_password,
             width=120,
             height=35,
@@ -111,28 +111,28 @@ class UserSelectFrame(ctk.CTkFrame):
         
         # Get users from database (User objects with profile pics)
         self.users = master.perm_manager.get_user_objects()[:3]  # First 3 users
+
+        # Logo
+        self.logo = ctk.CTkLabel(
+            self,
+            text="SPKL",
+            font=ctk.CTkFont("Broadway", size=50, weight="bold"),
+            text_color="white",
+            bg_color='#000001'
+        )
+        self.logo.place(relx=0.04, rely=0.02)
+        pywinstyles.set_opacity(self.logo, color="#000001")
         
         # Title
         self.title = ctk.CTkLabel(
             self,
-            text="ADMIN",
-            font=ctk.CTkFont(size=80, weight="bold"),
+            text="Who's managing?",
+            font=ctk.CTkFont("Tw Cen MT Condensed Extra Bold", size=80),
             text_color="white",
             bg_color='#000001'
         )
         self.title.pack(pady=(80, 10))
         pywinstyles.set_opacity(self.title, color="#000001")
-        
-        # Subtitle
-        self.subtitle = ctk.CTkLabel(
-            self,
-            text="Who's managing?",
-            font=ctk.CTkFont(size=36),
-            text_color="white",
-            bg_color='#000001'
-        )
-        self.subtitle.pack(pady=(0, 60))
-        pywinstyles.set_opacity(self.subtitle, color="#000001")
         
         # Create user cards directly on self
         self.user_cards = []
@@ -153,7 +153,7 @@ class UserSelectFrame(ctk.CTkFrame):
             self,
             text="Not here?",
             command=self.show_login,
-            font=ctk.CTkFont(size=20),
+            font=ctk.CTkFont("Bahnschrift Light Condensed", size=20),
             width=200,
             height=50,
             fg_color="transparent",
@@ -170,7 +170,7 @@ class UserSelectFrame(ctk.CTkFrame):
                         fg_color="red", bg_color="#000001",
                         text_color="black",
                         hover_color=("#E0E0E0", "#D0D0D0"),
-                        font=ctk.CTkFont(size=14, weight="bold"),
+                        font=ctk.CTkFont("Bahnschrift Condensed", size=14),
                         corner_radius=25,
                         width=100, height=50)
         self.exit_button.place(x=960-50, y=1000)
@@ -233,7 +233,7 @@ class UserSelectFrame(ctk.CTkFrame):
         username_label = ctk.CTkLabel(
             card_frame,
             text=user_obj.name,
-            font=ctk.CTkFont(size=28, weight="bold"),
+            font=ctk.CTkFont("Tw Cen MT Condensed Bold", size=28),
             text_color="white",
             cursor="hand2"
         )

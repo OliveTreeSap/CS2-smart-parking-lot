@@ -38,7 +38,7 @@ cd CS2
 Create a new conda environment with all required dependencies using the provided `environment.yml` file:
 
 ```bash
-conda env create -f environment.yml
+conda env create -f config/environment.yml
 ```
 
 ### Step 3: Activate the Environment
@@ -72,7 +72,7 @@ python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 # Install dependencies
-pip install -r requirements.txt
+pip install -r config/requirements.txt
 
 # Install the project as a package (required for imports to work)
 pip install -e .
