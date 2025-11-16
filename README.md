@@ -3,19 +3,21 @@ This repository conrtains the code and wiring diagram for the smart parking lot 
 The parking lot is monitored and controlled through a user interface that communicates with the microcontroller
 
 ### Features
-- Controlled/Automatic gate
+- Automatic gate
 - Automatic vehicle elevator
 - Automatic lighting system
 - Fire detection and alarm
 - Rain detection and automatic canopy system
 
 ### Parts used
-- Microcontroller: Arduino Nano
+- Microcontroller: ESP32S3
 - Building material: foam paper
 - IR sensor for flame detection
 - Humidity sensor for rain detection
+- LDR for light detection
 - Servos for the main gate
 - DC motors for the elevator and canopy system
+- Motor drivers: DRV8833
 - LED strips for the lighting system
 
 ### Wiring diagram
@@ -90,7 +92,7 @@ To connect the application to your Arduino:
 4. Click "Connect" to establish serial communication
 
 **Troubleshooting:**
-- If no COM ports appear, ensure your Arduino is properly connected and drivers are installed
+- If no COM ports appear, ensure your microcontroller is properly connected and drivers are installed
 - Default baud rate is 115200 (change it according to your Arduino sketch)
 - Check that the serial port is not being used by another application (e.g., Arduino IDE Serial Monitor)
 
